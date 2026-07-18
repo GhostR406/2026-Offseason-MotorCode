@@ -14,10 +14,17 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.lib.io.motor.MotorIO;
+import frc.lib.io.motor.MotorIOSpark;
+import frc.lib.io.motor.MotorIOTalonFX;
+import frc.lib.io.motor.MotorIOSpark.RevFollower;
 import frc.lib.mechanisms.flywheel.FlywheelMechanism;
+import frc.lib.mechanisms.flywheel.FlywheelMechanismReal;
+import frc.lib.mechanisms.rotary.RotaryMechanismReal;
 import frc.robot.Constants.DoubleMotorConstants;
+import frc.robot.Constants.Ports;
 import frc.robot.Constants.SingleMotorConstants;
 import frc.robot.subsystems.DoubleMotor;
+import frc.robot.subsystems.Intake;
 import frc.robot.subsystems.Motors;
 import frc.robot.subsystems.SingleMotor;
 
@@ -39,8 +46,20 @@ import frc.robot.subsystems.SingleMotor;
 public class RobotContainer {
 
     //private final Motors m_motor = new Motors();
-    private final SingleMotor m_singleMotor = new SingleMotor(SingleMotorConstants.getSingleMotorIO());
-    private final DoubleMotor m_doubleMotor = new DoubleMotor(DoubleMotorConstants.getDoubleMotorIO());
+    // private final SingleMotor m_singleMotor = new SingleMotor(SingleMotorConstants.getSingleMotorIO());
+    // private final DoubleMotor m_doubleMotor = new DoubleMotor(DoubleMotorConstants.getDoubleMotorIO());
+
+    private final Intake intake = new Intake(
+    new FlywheelMechanismReal("Intake_Roller",
+        new MotorIOSpark(SingleMotorConstants.NAME, SingleMotorConstants.getREVConfig(), Ports.SingleMotor)
+        ),
+    new RotaryMechanismReal("Intake_Pivot",
+        new MotorIOSpark(DoubleMotorConstants.NAME, DoubleMotorConstants.getREVConfig(), Ports.DoubleMotorMain),
+        DoubleMotorConstants.CONSTANTS,
+        Optional.empty(),
+        ""
+        )
+    );
     
     Joystick driverJoystick = new Joystick(0);
 
@@ -65,17 +84,12 @@ public class RobotContainer {
      * Configures button bindings for driver and co-driver controls.
      * Also registers telemetry logging for the drivetrain subsystem.
      */
-    public RobotContainer() { 
-        
-        m_singleMotor.setDefaultCommand(m_singleMotor.setSetpoint(Rotation.of(1)));
-        
-        m_singleMotor.setDefaultCommand(m_singleMotor.setVelocity(SingleMotorConstants.Setpoint.STOP));
-        m_doubleMotor.setDefaultCommand(m_doubleMotor.setSetpoint(DoubleMotorConstants.DEFAULT_SETPOINT));
+    public RobotContainer() {
+        intake.setDefaultCommand(intake.stow());
 
-        btn_4.whileTrue(m_singleMotor.setVelocity(SingleMotorConstants.Setpoint.INTAKE).alongWith(m_doubleMotor.setSetpoint(DoubleMotorConstants.Setpoint.RAISED)).withName("Intake"));
-        btn_3.whileTrue(m_singleMotor.setVelocity(SingleMotorConstants.Setpoint.UNJAM).alongWith(m_doubleMotor.setSetpoint(DoubleMotorConstants.Setpoint.RAISED)).withName("Unjam"));
-        btn_2.whileTrue(m_singleMotor.setVelocity(SingleMotorConstants.Setpoint.FUNBOB).alongWith(m_doubleMotor.setSetpoint(DoubleMotorConstants.Setpoint.FUNBOB)).withName("FUNBOB"));
-
+        btn_4.whileTrue(intake.intake());
+        btn_3.whileTrue(intake.unjam());
+        btn_2.whileTrue(intake.turbob());
     }
     
     /**
