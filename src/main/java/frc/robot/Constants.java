@@ -10,6 +10,9 @@ import frc.lib.io.motor.MotorIOSparkSim;
 import frc.lib.mechanisms.flywheel.FlywheelMechanism;
 import frc.lib.mechanisms.flywheel.FlywheelMechanismReal;
 import frc.lib.mechanisms.flywheel.FlywheelMechanismSim;
+import frc.lib.mechanisms.rotary.RotaryMechanismReal;
+import frc.lib.mechanisms.rotary.RotaryMechanismSim;
+import frc.lib.mechanisms.rotary.RotaryMechanism;
 import frc.lib.mechanisms.rotary.RotaryMechanism.RotaryAxis;
 import frc.lib.mechanisms.rotary.RotaryMechanism.RotaryMechCharacteristics;
 
@@ -17,6 +20,9 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 import static edu.wpi.first.units.Units.*;
+
+import java.util.Optional;
+
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
@@ -28,6 +34,7 @@ import edu.wpi.first.units.measure.Mass;
 import edu.wpi.first.units.measure.MomentOfInertia;
 import edu.wpi.first.units.measure.Velocity;
 
+import com.revrobotics.AbsoluteEncoder;
 import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.config.SparkMaxConfig;
@@ -444,25 +451,32 @@ public final class Constants {
     
             return config;
         }
-        public static FlywheelMechanism<?> getDoubleMotorIO()
+        public static RotaryMechanism<?,?> getDoubleMotorIO()
     {
-        FlywheelMechanism<?> mechanism;
+        RotaryMechanism<?,?> mechanism;
         switch (Constants.currentMode) {
             case REAL:
                 mechanism = 
-                    new FlywheelMechanismReal(NAME,
-                        new MotorIOSpark(NAME, getREVConfig(), Ports.DoubleMotorMain, FOLLOWER_1));
+                    new RotaryMechanismReal(NAME,
+                        new MotorIOSpark(NAME, getREVConfig(), Ports.DoubleMotorMain, FOLLOWER_1),
+                        CONSTANTS,
+                        Optional.empty(),
+                        ""
+                        );
                 break;
             case SIM:
                 mechanism = 
-                    new FlywheelMechanismSim(
-                        NAME,
-                        new MotorIOSparkSim(NAME, getREVConfig(),Ports.DoubleMotorMain,ROTOR_TO_SENSOR,SENSOR_TO_MECHANISM,DCMOTOR, FOLLOWER_1),
-                        DCMOTOR, MOI, TOLERANCE_VELOCITY);
+                    new RotaryMechanismSim(NAME,
+                    new MotorIOSparkSim(NAME, getREVConfig(), Ports.DoubleMotorMain, SENSOR_TO_MECHANISM, ROTOR_TO_SENSOR, DCMOTOR, FOLLOWER_1),
+                    DCMOTOR,
+                    MOI,
+                    false,
+                    CONSTANTS,
+                    Optional.empty(), "");
                 break;
             case REPLAY:
                 mechanism = 
-                    new FlywheelMechanism<>(NAME, new MotorIO(){}) {};
+                    new RotaryMechanism<T, E>(new MotorIO(){}, new AbsoluteEncoder(){}) {};
                 break;
             default:
                 throw new IllegalStateException("Unrecognized Robot Mode");

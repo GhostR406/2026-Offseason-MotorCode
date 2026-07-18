@@ -49,17 +49,19 @@ public class RobotContainer {
     // private final SingleMotor m_singleMotor = new SingleMotor(SingleMotorConstants.getSingleMotorIO());
     // private final DoubleMotor m_doubleMotor = new DoubleMotor(DoubleMotorConstants.getDoubleMotorIO());
 
-    private final Intake intake = new Intake(
-    new FlywheelMechanismReal("Intake_Roller",
-        new MotorIOSpark(SingleMotorConstants.NAME, SingleMotorConstants.getREVConfig(), Ports.SingleMotor)
-        ),
-    new RotaryMechanismReal("Intake_Pivot",
-        new MotorIOSpark(DoubleMotorConstants.NAME, DoubleMotorConstants.getREVConfig(), Ports.DoubleMotorMain),
-        DoubleMotorConstants.CONSTANTS,
-        Optional.empty(),
-        ""
-        )
-    );
+    // private final Intake intake = new Intake(
+    // new FlywheelMechanismReal("Intake_Roller",
+    //     new MotorIOSpark(SingleMotorConstants.NAME, SingleMotorConstants.getREVConfig(), Ports.SingleMotor)
+    //     ),
+    // new RotaryMechanismReal("Intake_Pivot",
+    //     new MotorIOSpark(DoubleMotorConstants.NAME, DoubleMotorConstants.getREVConfig(), Ports.DoubleMotorMain),
+    //     DoubleMotorConstants.CONSTANTS,
+    //     Optional.empty(),
+    //     ""
+    //     )
+    // );
+
+    private final Intake m_intake = new Intake(SingleMotorConstants.getSingleMotorIO(), DoubleMotorConstants.getDoubleMotorIO());
     
     Joystick driverJoystick = new Joystick(0);
 
@@ -85,11 +87,11 @@ public class RobotContainer {
      * Also registers telemetry logging for the drivetrain subsystem.
      */
     public RobotContainer() {
-        intake.setDefaultCommand(intake.stow());
+        m_intake.setDefaultCommand(m_intake.stow());
 
-        btn_4.whileTrue(intake.intake());
-        btn_3.whileTrue(intake.unjam());
-        btn_2.whileTrue(intake.turbob());
+        btn_4.whileTrue(m_intake.intake());
+        btn_3.whileTrue(m_intake.unjam());
+        btn_2.whileTrue(m_intake.turbob());
     }
     
     /**

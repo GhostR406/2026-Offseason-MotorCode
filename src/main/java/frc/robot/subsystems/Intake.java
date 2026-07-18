@@ -24,7 +24,7 @@ public class Intake extends SubsystemBase {
     private final FlywheelMechanism m_roller;
     private final RotaryMechanism m_pivot;
 
-    public Intake(FlywheelMechanism roller, RotaryMechanism pivot) {
+    public Intake(FlywheelMechanism<?> roller, RotaryMechanism<?,?> pivot) {
         m_roller = roller;
         m_pivot = pivot;
     }
