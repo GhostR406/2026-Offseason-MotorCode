@@ -1,6 +1,7 @@
 package frc.robot.subsystems;
 
 import static edu.wpi.first.units.Units.Radian;
+import static edu.wpi.first.units.Units.Radians;
 import static edu.wpi.first.units.Units.Rotation;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 
@@ -21,8 +22,8 @@ import frc.robot.Constants.DoubleMotorConstants;
 import frc.robot.Constants.SingleMotorConstants;
 
 public class Intake extends SubsystemBase {
-    private final FlywheelMechanism m_roller;
-    private final RotaryMechanism m_pivot;
+    private final FlywheelMechanism<?> m_roller;
+    private final RotaryMechanism<?,?> m_pivot;
 
     public Intake(FlywheelMechanism<?> roller, RotaryMechanism<?,?> pivot) {
         m_roller = roller;
@@ -35,7 +36,7 @@ public class Intake extends SubsystemBase {
 
         return this.run(
             () -> m_roller.runVelocity(setpoint.getSetpoint(),
-                SingleMotorConstants.ACCELERATION, PIDSlot.SLOT_1))
+                SingleMotorConstants.ACCELERATION, PIDSlot.SLOT_3))
             .withName("Go To "  + setpoint.name() + " Setpoint - "+setpoint.getSetpoint().in(RotationsPerSecond));
             
     }
@@ -50,7 +51,7 @@ public class Intake extends SubsystemBase {
     public Command rollerSetpoint(Angle postion)
     {
         return this.runOnce(
-            () -> m_roller.runPosition(postion, PIDSlot.SLOT_0))
+            () -> m_roller.runUnprofiledPosition(postion, PIDSlot.SLOT_3))
             .withName("Go To "  + postion.in(Rotation) + " Setpoint");
     }
     public AngularVelocity rollerGetVelocity()
@@ -62,32 +63,40 @@ public class Intake extends SubsystemBase {
     public Command pivotSetpoint(DoubleMotorConstants.Setpoint setpoint)
     {
         return this.runOnce(
-            () -> m_pivot.runPosition(setpoint.getSetpoint(), PIDSlot.SLOT_0))
+            () -> m_pivot.runUnprofiledPosition(setpoint.getSetpoint(), PIDSlot.SLOT_0))
             .withName("Go To "  + setpoint.name() + " Setpoint");
     };
 
     // Intake Methods
     public Command stow() {
-        return rollerCoast()
-        .alongWith(pivotSetpoint(DoubleMotorConstants.DEFAULT_SETPOINT))
+        return this.run(() -> {
+            m_pivot.runUnprofiledPosition(DoubleMotorConstants.DEFAULT_SETPOINT.getSetpoint(), PIDSlot.SLOT_0);
+            m_roller.runCoast();
+        })
         .withName("Stow");
     }
 
     public Command intake() {
-        return rollerSetVelocity(SingleMotorConstants.Setpoint.INTAKE)
-        .alongWith(pivotSetpoint(DoubleMotorConstants.Setpoint.RAISED))
+        return this.run(() -> {
+            m_roller.runVelocity(SingleMotorConstants.Setpoint.INTAKE.getSetpoint(), PIDSlot.SLOT_3);
+            m_pivot.runUnprofiledPosition(DoubleMotorConstants.Setpoint.RAISED.getSetpoint(), PIDSlot.SLOT_0);
+        })
         .withName("Intake");
     }
 
     public Command unjam() {
-        return rollerSetVelocity(SingleMotorConstants.Setpoint.UNJAM)
-        .alongWith(pivotSetpoint(DoubleMotorConstants.Setpoint.RAISED))
+        return this.run(() -> {
+            rollerSetVelocity(SingleMotorConstants.Setpoint.UNJAM);
+            pivotSetpoint(DoubleMotorConstants.Setpoint.RAISED);
+        })
         .withName("Unjam");
     }
 
     public Command turbob() {
-        return rollerSetVelocity(SingleMotorConstants.Setpoint.FUNBOB)
-        .alongWith(pivotSetpoint(DoubleMotorConstants.Setpoint.FUNBOB))
+        return this.run(() -> {
+            rollerSetVelocity(SingleMotorConstants.Setpoint.FUNBOB);
+            pivotSetpoint(DoubleMotorConstants.Setpoint.FUNBOB);
+        })
         .withName("TURBOB");
     }
 
@@ -97,19 +106,29 @@ public class Intake extends SubsystemBase {
         LoggerHelper.recordCurrentCommand("Intake", this);
 
         m_pivot.periodic();
-        Logger.recordOutput(
-            "3D_Feild/2_DoubleMotor",
-            new Pose3d[] {new Pose3d(-0.127,0,0.1143, new Rotation3d(0, m_pivot.getPosition().in(Radian), 0))}
-        );
 
         m_roller.periodic();
-            Logger.recordOutput("3D_Feild/0_Zero",
-            new Pose3d[] {new Pose3d(0,0,0, new Rotation3d(0, 0, -0))}
+        
+
+        Logger.recordOutput("3D_Feild/0_2022_RobotPose",
+            new Pose3d[] {
+                new Pose3d(3.75,3.25,0.075,
+                    new Rotation3d(0, 0, 0)
+                )
+            }
         );
         Logger.recordOutput(
-            "3D_Feild/1_SingleWheel",
-            new Pose3d[] {new Pose3d(0.04445,-0.127,0.6223,new Rotation3d(0, 0, m_roller.getPosition().in(Radian)))}
+            "3D_Feild/1_2022_Turret_Yaw",
+            new Pose3d[] {
+                new Pose3d(-0.0762,0,0,
+                    new Rotation3d(0, 0, m_roller.getPosition().in(Radians))
+            )
+            }
         );
-        
+        Logger.recordOutput(
+            "3D_Feild/2_2022_Turret_Pitch",
+            new Pose3d[] {
+                new Pose3d(-0.0775-0.0975*Math.cos(m_roller.getPosition().in(Radians)),-0.0975*Math.sin(m_roller.getPosition().in(Radians)),0.48, new Rotation3d(0, m_pivot.getPosition().in(Radian), m_roller.getPosition().in(Radians)))});
+        Logger.recordOutput("3D_Feild/3_2022_Intake", new Pose3d[] {new Pose3d(0.19,0,0.37, new Rotation3d(0, m_pivot.getPosition().in(Radians), 0))});
     }
 }

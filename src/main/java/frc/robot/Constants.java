@@ -2,6 +2,7 @@ package frc.robot;
 
 import frc.lib.util.Device;
 import frc.lib.util.PID;
+import frc.lib.io.absoluteencoder.AbsoluteEncoderIO;
 import frc.lib.io.motor.MotorIO;
 import frc.lib.io.motor.MotorIO.PIDSlot;
 import frc.lib.io.motor.MotorIOSpark;
@@ -476,7 +477,7 @@ public final class Constants {
                 break;
             case REPLAY:
                 mechanism = 
-                    new RotaryMechanism<T, E>(new MotorIO(){}, new AbsoluteEncoder(){}) {};
+                    new RotaryMechanism<MotorIO, AbsoluteEncoderIO>(NAME, CONSTANTS, new MotorIO(){}, Optional.empty(), "Encoder"){};
                 break;
             default:
                 throw new IllegalStateException("Unrecognized Robot Mode");

@@ -10,8 +10,10 @@ import static edu.wpi.first.units.Units.RotationsPerSecond;
 import java.util.Optional;
 
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.lib.io.motor.MotorIO;
 import frc.lib.io.motor.MotorIOSpark;
@@ -63,21 +65,21 @@ public class RobotContainer {
 
     private final Intake m_intake = new Intake(SingleMotorConstants.getSingleMotorIO(), DoubleMotorConstants.getDoubleMotorIO());
     
-    Joystick driverJoystick = new Joystick(0);
+    //Joystick driverJoystick = new Joystick(0);
+    private CommandXboxController controller = new CommandXboxController(0);
 
-    private JoystickButton btn_1 = new JoystickButton(driverJoystick, 1);
-    private JoystickButton btn_2 = new JoystickButton(driverJoystick, 2);
-    private JoystickButton btn_3 = new JoystickButton(driverJoystick, 3);
-    private JoystickButton btn_4 = new JoystickButton(driverJoystick, 4);
-    private JoystickButton btn_5 = new JoystickButton(driverJoystick, 5);
-    private JoystickButton btn_6 = new JoystickButton(driverJoystick, 6);
-    private JoystickButton btn_7 = new JoystickButton(driverJoystick, 7);
-    private JoystickButton btn_8 = new JoystickButton(driverJoystick, 8);
-    private JoystickButton btn_9 = new JoystickButton(driverJoystick, 9);
-    private JoystickButton btn_10 = new JoystickButton(driverJoystick, 10);
-    private JoystickButton btn_11 = new JoystickButton(driverJoystick, 11);
-    private JoystickButton btn_12 = new JoystickButton(driverJoystick, 12);
-
+    // private JoystickButton btn_1 = new JoystickButton(driverJoystick, 1);
+    // private JoystickButton btn_2 = new JoystickButton(driverJoystick, 2);
+    // private JoystickButton btn_3 = new JoystickButton(driverJoystick, 3);
+    // private JoystickButton btn_4 = new JoystickButton(driverJoystick, 4);
+    // private JoystickButton btn_5 = new JoystickButton(driverJoystick, 5);
+    // private JoystickButton btn_6 = new JoystickButton(driverJoystick, 6);
+    // private JoystickButton btn_7 = new JoystickButton(driverJoystick, 7);
+    // private JoystickButton btn_8 = new JoystickButton(driverJoystick, 8);
+    // private JoystickButton btn_9 = new JoystickButton(driverJoystick, 9);
+    // private JoystickButton btn_10 = new JoystickButton(driverJoystick, 10);
+    // private JoystickButton btn_11 = new JoystickButton(driverJoystick, 11);
+    // private JoystickButton btn_12 = new JoystickButton(driverJoystick, 12);
     
     /**
      * Constructs a new RobotContainer.
@@ -89,9 +91,13 @@ public class RobotContainer {
     public RobotContainer() {
         m_intake.setDefaultCommand(m_intake.stow());
 
-        btn_4.whileTrue(m_intake.intake());
-        btn_3.whileTrue(m_intake.unjam());
-        btn_2.whileTrue(m_intake.turbob());
+        // btn_4.whileTrue(m_intake.intake());
+        // btn_3.whileTrue(m_intake.unjam());
+        // btn_2.whileTrue(m_intake.turbob());
+        controller.x().whileTrue(m_intake.intake());
+        // controller.x().whileFalse(m_intake.stow());
+        controller.y().whileTrue(m_intake.unjam());
+        controller.b().whileTrue(m_intake.turbob());
     }
     
     /**
