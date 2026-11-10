@@ -4,6 +4,8 @@
 
 package frc.robot;
 
+import static edu.wpi.first.units.Units.Volt;
+
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedPowerDistribution;
 import org.littletonrobotics.junction.LoggedRobot;
@@ -99,6 +101,7 @@ public class Robot extends LoggedRobot {
 
     Logger.recordOutput("Robot/Time", Timer.getMatchTime());
 
+    Constants.TurboLikeTheHorseVortexConstants.getMaxRotomIO().runVoltage(Volt.of(12));
   }
 
 

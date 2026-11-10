@@ -8,6 +8,8 @@ import frc.lib.io.motor.MotorIO.PIDSlot;
 import frc.lib.io.motor.MotorIOSpark;
 import frc.lib.io.motor.MotorIOSpark.RevFollower;
 import frc.lib.io.motor.MotorIOSparkSim;
+import frc.lib.io.motor.MotorIOTalonFX;
+import frc.lib.io.motor.MotorIOTalonFXSim;
 import frc.lib.mechanisms.flywheel.FlywheelMechanism;
 import frc.lib.mechanisms.flywheel.FlywheelMechanismReal;
 import frc.lib.mechanisms.flywheel.FlywheelMechanismSim;
@@ -40,11 +42,16 @@ import edu.wpi.first.units.measure.Mass;
 import edu.wpi.first.units.measure.MomentOfInertia;
 import edu.wpi.first.units.measure.Velocity;
 
+import com.ctre.phoenix6.configs.Slot0Configs;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.signals.InvertedValue;
+import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.revrobotics.AbsoluteEncoder;
 import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.config.MAXMotionConfig;
+import com.revrobotics.spark.config.SparkFlexConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.thethriftybot.server.CAN;
 
@@ -114,8 +121,10 @@ public final class Constants {
         public static final Device.CAN DoubleMotorMain = new Device.CAN(10, "rio");
         public static final Device.CAN DoubleMotorFollower = new Device.CAN(11, "rio");
 
-        public static final Device.CAN TurboHorseNeo_Rotary = new Device.CAN(15, "rio");
-        public static final Device.CAN TurboHorseNeo_Linear = new Device.CAN(16, "rio");
+        public static final Device.CAN TurboHorseNeo = new Device.CAN(15, "rio");
+        public static final Device.CAN TurboHorseVortexMax = new Device.CAN(34, "rio");
+        public static final Device.CAN TurboHorseVortexFlex = new Device.CAN(46, "rio");
+        public static final Device.CAN TurboHorseTalon = new Device.CAN(12, "rio");
 
     }
     
@@ -517,7 +526,166 @@ public final class Constants {
         public static final int LEADER_ID = 1;
     }
 
-    public class TurboLikeTheHorseConstants {
+    public class TurboLikeTheHorseTalontedConstants {
+        public static final String NAME = "68_Turbo";
+    
+        public static final Angle TOLERANCE_POSITION  = Rotations.of(0.01);
+        public static final AngularVelocity TOLERANCE_VELOCITY = RotationsPerSecond.of(0.01);
+    
+        public static final AngularVelocity CRUISE_VELOCITY = RotationsPerSecond.of(0.2);
+        public static final AngularAcceleration ACCELERATION = RotationsPerSecondPerSecond.of(0.1);
+        public static final Velocity<edu.wpi.first.units.AngularAccelerationUnit> JERK = ACCELERATION.per(Second);
+    
+        private static final double ROTOR_TO_SENSOR = (1.0 / 1.0);
+        private static final double SENSOR_TO_MECHANISM = (1.0 / 1.0);
+    
+        public static final Translation3d OFFSET = Translation3d.kZero;
+    
+        public static final Angle MIN_ANGLE = Rotations.of(0.0);
+        public static final Angle MAX_ANGLE = Rotations.of(1);
+        public static final Angle STARTING_ANGLE = Rotations.of(0.0);
+        public static final Distance WHEEL_RADIUS = Meters.of(0.05);
+    
+        public static final Distance MIN_DISTANCE = Meters.of(0.0);
+        public static final Distance MAX_DISTANCE = Meters.of(0.75);
+        public static final Distance STARTING_DISTANCE = Meters.of(0.0);
+        public static final Distance DRUM_RADIUS = Meters.of(0.05);
+    
+        public static final RotaryMechCharacteristics CONSTANTS_ROTARY =
+            new RotaryMechCharacteristics(WHEEL_RADIUS, MIN_ANGLE, MAX_ANGLE, STARTING_ANGLE, RotaryAxis.YAW);
+    
+        public static final LinearMechCharacteristics CONSTANTS_LINEAR =
+            new LinearMechCharacteristics(MIN_DISTANCE, MAX_DISTANCE, STARTING_DISTANCE, DRUM_RADIUS, new Rotation3d(0, 0, 0));
+
+        public static final Mass WHEEL_MASS = Kilograms.of(0.1);
+        public static final DCMotor DCMOTOR = DCMotor.getFalcon500(1);
+        public static final MomentOfInertia MOI = KilogramSquareMeters
+            .of(0.5*WHEEL_MASS.in(Kilogram)*Math.pow(WHEEL_RADIUS.in(Meter),2));
+
+        public static final PID SLOT0_PID = new PID(10.0, 0.0, 0.0).withS(0.0); //Postion
+        public static final PID SLOT1_PID = new PID(0.01, 0.0, 0.0).withV(0.511); // Velocity
+
+        public static TalonFXConfiguration getREVConfig() {
+      TalonFXConfiguration config = new TalonFXConfiguration();
+
+      config.CurrentLimits.SupplyCurrentLimitEnable = Robot.isReal();
+      config.CurrentLimits.SupplyCurrentLimit = 40.0;
+      config.CurrentLimits.SupplyCurrentLowerLimit = 40.0;
+      config.CurrentLimits.SupplyCurrentLowerTime = 0.1;
+
+      config.CurrentLimits.StatorCurrentLimitEnable = Robot.isReal();
+      config.CurrentLimits.StatorCurrentLimit = 80.0;
+
+      config.Voltage.PeakForwardVoltage = 12.0;
+      config.Voltage.PeakReverseVoltage = -12.0;
+
+      config.MotorOutput.NeutralMode = NeutralModeValue.Brake;
+      config.MotorOutput.Inverted = InvertedValue.CounterClockwise_Positive;
+
+      config.SoftwareLimitSwitch.ForwardSoftLimitEnable = false;
+      // config.SoftwareLimitSwitch.ForwardSoftLimitThreshold =
+      //     CONVERTER.toAngle(MAX_DISTANCE).in(Rotations);
+
+      config.SoftwareLimitSwitch.ReverseSoftLimitEnable = false;
+      // config.SoftwareLimitSwitch.ReverseSoftLimitThreshold =
+      //     CONVERTER.toAngle(MIN_DISTANCE).in(Rotations);
+
+      config.Feedback.RotorToSensorRatio = 1.0;
+
+      config.Feedback.SensorToMechanismRatio = SENSOR_TO_MECHANISM;
+
+      if (RobotBase.isReal()) {
+        config.Slot0 =
+            new Slot0Configs().withKP(10).withKI(0.0).withKD(0.0).withKV(0.05).withKS(8.0);
+      } else {
+        config.Slot0 = new Slot0Configs().withKP(0.75).withKI(0.0).withKD(0.0);
+      }
+
+      config.MotionMagic.MotionMagicCruiseVelocity = CRUISE_VELOCITY.in(RotationsPerSecond);
+      config.MotionMagic.MotionMagicAcceleration = ACCELERATION.in(RotationsPerSecondPerSecond);
+      config.MotionMagic.MotionMagicJerk = JERK.in(RotationsPerSecondPerSecond.per(Second));
+
+      return config;
+    }
+
+        public static FlywheelMechanism<?> getFlywheelIO()
+        {
+            FlywheelMechanism<?> mechanism;
+            switch (Constants.currentMode) {
+                case REAL:
+                    mechanism = 
+                        new FlywheelMechanismReal(NAME,
+                            new MotorIOTalonFX(NAME, getREVConfig(), Ports.TurboHorseTalon));
+                    break;
+                case SIM:
+                    mechanism = 
+                        new FlywheelMechanismSim(
+                            NAME,
+                            new MotorIOTalonFXSim(NAME, getREVConfig(), Ports.TurboHorseTalon),
+                            DCMOTOR, MOI, TOLERANCE_VELOCITY);
+                    break;
+                case REPLAY:
+                    mechanism = 
+                        new FlywheelMechanism<>(NAME, new MotorIO(){}) {};
+                    break;
+                default:
+                    throw new IllegalStateException("Unrecognized Robot Mode");
+            }
+            //mechanism.enableTunablePID(PIDSlot.SLOT_0, SLOT0_PID);
+
+            return mechanism;
+        }
+
+        public static RotaryMechanism<?, ?> getMaxRotomIO()
+        {
+            RotaryMechanism<?, ?> mechanism;
+            switch (Constants.currentMode) {
+                case REAL:
+                    mechanism = 
+                        new RotaryMechanismReal(NAME, new MotorIOTalonFX(NAME, getREVConfig(), Ports.TurboHorseTalon), CONSTANTS_ROTARY, Optional.empty(), "");
+                    break;
+                case SIM:
+                    mechanism = 
+                        new RotaryMechanismSim(NAME, new MotorIOTalonFXSim(NAME, getREVConfig(), Ports.TurboHorseTalon), DCMOTOR, MOI, true, CONSTANTS_ROTARY, Optional.empty(), "");
+                    break;
+                case REPLAY:
+                    mechanism = 
+                        new RotaryMechanism<MotorIO, AbsoluteEncoderIO>(NAME, CONSTANTS_ROTARY, new MotorIO(){}, Optional.empty(), "Encoder"){};
+                    break;
+                default:
+                    throw new IllegalStateException("Unrecognized Robot Mode");
+            }
+            //mechanism.enableTunablePID(PIDSlot.SLOT_0, SLOT0_PID);
+
+            return mechanism;
+        }
+
+        public static LinearMechanism<?> getMaxLiteraryIO()
+        {
+            LinearMechanism<?> mechanism;
+            switch (Constants.currentMode) {
+                case REAL:
+                    mechanism = 
+                        new LinearMechanismReal(NAME, new MotorIOTalonFX(NAME, getREVConfig(), Ports.TurboHorseTalon), CONSTANTS_LINEAR);
+                    break;
+                case SIM:
+                    mechanism = 
+                        new LinearMechanismSim(NAME, new MotorIOTalonFXSim(NAME, getREVConfig(), Ports.TurboHorseTalon), DCMOTOR, WHEEL_MASS, true, CONSTANTS_LINEAR);
+                    break;
+                case REPLAY:
+                    mechanism = 
+                        new LinearMechanism<MotorIO>(NAME, CONSTANTS_LINEAR, new MotorIO(){}) {};
+                    break;
+                default:
+                    throw new IllegalStateException("Unrecognized Robot Mode");
+            }
+            //mechanism.enableTunablePID(PIDSlot.SLOT_0, SLOT0_PID);
+
+            return mechanism;
+        }
+    }
+
+    public class TurboLikeTheHorse550Constants {
         public static final String NAME = "46_Turbo";
     
         public static final Angle TOLERANCE_POSITION  = Rotations.of(0.01);
@@ -668,13 +836,13 @@ public final class Constants {
                 case REAL:
                     mechanism = 
                         new FlywheelMechanismReal(NAME,
-                            new MotorIOSpark(NAME, getREVConfig(), Ports.SingleMotor));
+                            new MotorIOSpark(NAME, getREVConfig(), Ports.TurboHorseNeo));
                     break;
                 case SIM:
                     mechanism = 
                         new FlywheelMechanismSim(
                             NAME,
-                            new MotorIOSparkSim(NAME, getREVConfig(),Ports.SingleMotor,ROTOR_TO_SENSOR,SENSOR_TO_MECHANISM,DCMOTOR),
+                            new MotorIOSparkSim(NAME, getREVConfig(),Ports.TurboHorseNeo,ROTOR_TO_SENSOR,SENSOR_TO_MECHANISM,DCMOTOR),
                             DCMOTOR, MOI, TOLERANCE_VELOCITY);
                     break;
                 case REPLAY:
@@ -689,17 +857,17 @@ public final class Constants {
             return mechanism;
         }
 
-        public static RotaryMechanism<?, ?> getRotaryIO()
+        public static RotaryMechanism<?, ?> getMaxRotomIO()
         {
             RotaryMechanism<?, ?> mechanism;
             switch (Constants.currentMode) {
                 case REAL:
                     mechanism = 
-                        new RotaryMechanismReal(NAME, new MotorIOSpark(NAME, getREVConfig(), Ports.TurboHorseNeo_Rotary), CONSTANTS_ROTARY, Optional.empty(), "");
+                        new RotaryMechanismReal(NAME, new MotorIOSpark(NAME, getREVConfig(), Ports.TurboHorseNeo), CONSTANTS_ROTARY, Optional.empty(), "");
                     break;
                 case SIM:
                     mechanism = 
-                        new RotaryMechanismSim(NAME, new MotorIOSparkSim(NAME, getREVConfig(), Ports.TurboHorseNeo_Rotary, ROTOR_TO_SENSOR, SENSOR_TO_MECHANISM, DCMOTOR), DCMOTOR, MOI, true, CONSTANTS_ROTARY, Optional.empty(), "");
+                        new RotaryMechanismSim(NAME, new MotorIOSparkSim(NAME, getREVConfig(), Ports.TurboHorseNeo, ROTOR_TO_SENSOR, SENSOR_TO_MECHANISM, DCMOTOR), DCMOTOR, MOI, true, CONSTANTS_ROTARY, Optional.empty(), "");
                     break;
                 case REPLAY:
                     mechanism = 
@@ -713,17 +881,459 @@ public final class Constants {
             return mechanism;
         }
 
-        public static LinearMechanism<?> getLiteraryIO()
+        public static LinearMechanism<?> getMaxLiteraryIO()
         {
             LinearMechanism<?> mechanism;
             switch (Constants.currentMode) {
                 case REAL:
                     mechanism = 
-                        new LinearMechanismReal(NAME, new MotorIOSpark(NAME, getREVConfig(), Ports.TurboHorseNeo_Linear), CONSTANTS_LINEAR);
+                        new LinearMechanismReal(NAME, new MotorIOSpark(NAME, getREVConfig(), Ports.TurboHorseNeo), CONSTANTS_LINEAR);
                     break;
                 case SIM:
                     mechanism = 
-                        new LinearMechanismSim(NAME, new MotorIOSparkSim(NAME, getREVConfig(), Ports.TurboHorseNeo_Linear, SENSOR_TO_MECHANISM, ROTOR_TO_SENSOR, DCMOTOR), DCMOTOR, WHEEL_MASS, true, CONSTANTS_LINEAR);
+                        new LinearMechanismSim(NAME, new MotorIOSparkSim(NAME, getREVConfig(), Ports.TurboHorseNeo, SENSOR_TO_MECHANISM, ROTOR_TO_SENSOR, DCMOTOR), DCMOTOR, WHEEL_MASS, true, CONSTANTS_LINEAR);
+                    break;
+                case REPLAY:
+                    mechanism = 
+                        new LinearMechanism<MotorIO>(NAME, CONSTANTS_LINEAR, new MotorIO(){}) {};
+                    break;
+                default:
+                    throw new IllegalStateException("Unrecognized Robot Mode");
+            }
+            //mechanism.enableTunablePID(PIDSlot.SLOT_0, SLOT0_PID);
+
+            return mechanism;
+        }
+    }
+
+    public class TurboLikeTheHorseVortexConstants {
+        public static final String NAME = "51_Turbo";
+    
+        public static final Angle TOLERANCE_POSITION  = Rotations.of(0.01);
+        public static final AngularVelocity TOLERANCE_VELOCITY = RotationsPerSecond.of(0.01);
+    
+        public static final AngularVelocity CRUISE_VELOCITY = RotationsPerSecond.of(0.2);
+        public static final AngularAcceleration ACCELERATION = RotationsPerSecondPerSecond.of(0.1);
+        public static final Velocity<edu.wpi.first.units.AngularAccelerationUnit> JERK = ACCELERATION.per(Second);
+    
+        private static final double ROTOR_TO_SENSOR = (1.0 / 1.0);
+        private static final double SENSOR_TO_MECHANISM = (1.0 / 1.0);
+    
+        public static final Translation3d OFFSET = Translation3d.kZero;
+    
+        public static final Angle MIN_ANGLE = Rotations.of(0.0);
+        public static final Angle MAX_ANGLE = Rotations.of(1);
+        public static final Angle STARTING_ANGLE = Rotations.of(0.0);
+        public static final Distance WHEEL_RADIUS = Meters.of(0.05);
+    
+        public static final Distance MIN_DISTANCE = Meters.of(0.0);
+        public static final Distance MAX_DISTANCE = Meters.of(0.75);
+        public static final Distance STARTING_DISTANCE = Meters.of(0.0);
+        public static final Distance DRUM_RADIUS = Meters.of(0.05);
+    
+        public static final RotaryMechCharacteristics CONSTANTS_ROTARY =
+            new RotaryMechCharacteristics(WHEEL_RADIUS, MIN_ANGLE, MAX_ANGLE, STARTING_ANGLE, RotaryAxis.YAW);
+    
+        public static final LinearMechCharacteristics CONSTANTS_LINEAR =
+            new LinearMechCharacteristics(MIN_DISTANCE, MAX_DISTANCE, STARTING_DISTANCE, DRUM_RADIUS, new Rotation3d(0, 0, 0));
+
+        public static final Mass WHEEL_MASS = Kilograms.of(0.1);
+        public static final DCMotor DCMOTOR = DCMotor.getNeoVortex(1);
+        public static final MomentOfInertia MOI = KilogramSquareMeters
+            .of(0.5*WHEEL_MASS.in(Kilogram)*Math.pow(WHEEL_RADIUS.in(Meter),2));
+
+        public static final PID SLOT0_PID = new PID(10.0, 0.0, 0.0).withS(0.0); //Postion
+        public static final PID SLOT1_PID = new PID(0.01, 0.0, 0.0).withV(0.511); // Velocity
+
+        public static SparkMaxConfig getREVConfig()
+        {
+            SparkMaxConfig config = new SparkMaxConfig();
+
+            config.smartCurrentLimit(60)
+            .voltageCompensation(12.0)
+            .idleMode(IdleMode.kCoast)
+            .inverted(false)
+            //.advanceCommutation(120.0)//Uncomment if using minion this is from SparkMaxConfig.Presets.CTRE_Minion some peole say -120 works
+            
+            .signals
+            .primaryEncoderPositionAlwaysOn(true)
+            .primaryEncoderPositionPeriodMs(20)
+            .primaryEncoderVelocityAlwaysOn(true)
+            .primaryEncoderVelocityPeriodMs(20)
+            .appliedOutputPeriodMs(20)
+            .busVoltagePeriodMs(20)
+            .outputCurrentPeriodMs(20);
+
+            config.encoder
+            .positionConversionFactor(1/SENSOR_TO_MECHANISM)
+            .velocityConversionFactor(1/SENSOR_TO_MECHANISM/60);
+            //Uncomment if using velocity control
+            // .uvwMeasurementPeriod(10)
+            // .uvwAverageDepth(2);
+
+            config.softLimit
+            .forwardSoftLimit(MAX_ANGLE.in(Rotations))
+            .forwardSoftLimitEnabled(false)
+            .reverseSoftLimit(MIN_ANGLE.in(Rotations))
+            .reverseSoftLimitEnabled(false);
+
+            config.closedLoop
+            .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
+
+                // Position slot 0
+                .p(SLOT0_PID.P(), ClosedLoopSlot.kSlot0)
+                .i(SLOT0_PID.I(), ClosedLoopSlot.kSlot0)
+                .d(SLOT0_PID.D(), ClosedLoopSlot.kSlot0)
+                .iZone(0, ClosedLoopSlot.kSlot0)
+                .iMaxAccum(0.0, ClosedLoopSlot.kSlot0)
+                .outputRange(-1,1, ClosedLoopSlot.kSlot0)
+    
+                //Velocity slot 1
+                .p(SLOT1_PID.P(), ClosedLoopSlot.kSlot1)
+                .i(SLOT1_PID.I(), ClosedLoopSlot.kSlot1)
+                .d(SLOT1_PID.D(), ClosedLoopSlot.kSlot1)
+                .iZone(0, ClosedLoopSlot.kSlot1)
+                .iMaxAccum(0.0, ClosedLoopSlot.kSlot1)
+                .outputRange(-1,1, ClosedLoopSlot.kSlot1)
+
+                // Position slot 2 with motion profile
+                .p(SLOT0_PID.P(), ClosedLoopSlot.kSlot2)
+                .i(SLOT0_PID.I(), ClosedLoopSlot.kSlot2)
+                .d(SLOT0_PID.D(), ClosedLoopSlot.kSlot2)
+                .iZone(0, ClosedLoopSlot.kSlot2)
+                .iMaxAccum(0.0, ClosedLoopSlot.kSlot2)
+                .outputRange(-1,1, ClosedLoopSlot.kSlot2)
+    
+                //Velocity slot 3 with motion profile
+                .p(SLOT1_PID.P(), ClosedLoopSlot.kSlot3)
+                .i(SLOT1_PID.I(), ClosedLoopSlot.kSlot3)
+                .d(SLOT1_PID.D(), ClosedLoopSlot.kSlot3)
+                .iZone(0, ClosedLoopSlot.kSlot3)
+                .iMaxAccum(0.0, ClosedLoopSlot.kSlot3)
+                .outputRange(-1,1, ClosedLoopSlot.kSlot3)
+
+                .feedForward
+                .kS(SLOT0_PID.S(),ClosedLoopSlot.kSlot0)
+                .kV(SLOT0_PID.V(),ClosedLoopSlot.kSlot0)
+                .kA(SLOT0_PID.A(),ClosedLoopSlot.kSlot0)
+                .kG(SLOT0_PID.G(),ClosedLoopSlot.kSlot0)
+                .kCosRatio(0,ClosedLoopSlot.kSlot0)
+
+                .kS(SLOT1_PID.S(),ClosedLoopSlot.kSlot1)
+                .kV(SLOT1_PID.V(),ClosedLoopSlot.kSlot1)
+                .kA(SLOT1_PID.A(),ClosedLoopSlot.kSlot1)
+
+                .kS(SLOT0_PID.S(),ClosedLoopSlot.kSlot2)
+                .kV(SLOT0_PID.V(),ClosedLoopSlot.kSlot2)
+                .kA(SLOT0_PID.A(),ClosedLoopSlot.kSlot2)
+                .kG(SLOT0_PID.G(),ClosedLoopSlot.kSlot2)
+                .kCosRatio(0,ClosedLoopSlot.kSlot2)
+
+                .kS(SLOT1_PID.S(),ClosedLoopSlot.kSlot3)
+                .kV(SLOT1_PID.V(),ClosedLoopSlot.kSlot3)
+                .kA(SLOT1_PID.A(),ClosedLoopSlot.kSlot3);
+
+
+
+            config.closedLoop.maxMotion
+            //Position 
+                .cruiseVelocity(CRUISE_VELOCITY.in(RotationsPerSecond),ClosedLoopSlot.kSlot2)
+                .maxAcceleration(ACCELERATION.in(RotationsPerSecondPerSecond),ClosedLoopSlot.kSlot2)
+                .allowedProfileError(TOLERANCE_POSITION.in(Rotations),ClosedLoopSlot.kSlot2)
+                .positionMode(MAXMotionConfig.MAXMotionPositionMode.kMAXMotionTrapezoidal,ClosedLoopSlot.kSlot2)
+                
+            //Velocity
+                .cruiseVelocity(CRUISE_VELOCITY.in(RotationsPerSecond),ClosedLoopSlot.kSlot3)
+                .maxAcceleration(ACCELERATION.in(RotationsPerSecondPerSecond),ClosedLoopSlot.kSlot3)
+                .allowedProfileError(TOLERANCE_VELOCITY.in(RotationsPerSecond),ClosedLoopSlot.kSlot3);
+    
+            return config;
+        }
+
+        public static FlywheelMechanism<?> getFlywheelIO()
+        {
+            FlywheelMechanism<?> mechanism;
+            switch (Constants.currentMode) {
+                case REAL:
+                    mechanism = 
+                        new FlywheelMechanismReal(NAME,
+                            new MotorIOSpark(NAME, getREVConfig(), Ports.TurboHorseVortexMax));
+                    break;
+                case SIM:
+                    mechanism = 
+                        new FlywheelMechanismSim(
+                            NAME,
+                            new MotorIOSparkSim(NAME, getREVConfig(),Ports.TurboHorseVortexMax,ROTOR_TO_SENSOR,SENSOR_TO_MECHANISM,DCMOTOR),
+                            DCMOTOR, MOI, TOLERANCE_VELOCITY);
+                    break;
+                case REPLAY:
+                    mechanism = 
+                        new FlywheelMechanism<>(NAME, new MotorIO(){}) {};
+                    break;
+                default:
+                    throw new IllegalStateException("Unrecognized Robot Mode");
+            }
+            //mechanism.enableTunablePID(PIDSlot.SLOT_0, SLOT0_PID);
+
+            return mechanism;
+        }
+
+        public static RotaryMechanism<?, ?> getMaxRotomIO()
+        {
+            RotaryMechanism<?, ?> mechanism;
+            switch (Constants.currentMode) {
+                case REAL:
+                    mechanism = 
+                        new RotaryMechanismReal(NAME, new MotorIOSpark(NAME, getREVConfig(), Ports.TurboHorseVortexMax), CONSTANTS_ROTARY, Optional.empty(), "");
+                    break;
+                case SIM:
+                    mechanism = 
+                        new RotaryMechanismSim(NAME, new MotorIOSparkSim(NAME, getREVConfig(), Ports.TurboHorseVortexMax, ROTOR_TO_SENSOR, SENSOR_TO_MECHANISM, DCMOTOR), DCMOTOR, MOI, true, CONSTANTS_ROTARY, Optional.empty(), "");
+                    break;
+                case REPLAY:
+                    mechanism = 
+                        new RotaryMechanism<MotorIO, AbsoluteEncoderIO>(NAME, CONSTANTS_ROTARY, new MotorIO(){}, Optional.empty(), "Encoder"){};
+                    break;
+                default:
+                    throw new IllegalStateException("Unrecognized Robot Mode");
+            }
+            //mechanism.enableTunablePID(PIDSlot.SLOT_0, SLOT0_PID);
+
+            return mechanism;
+        }
+
+        public static LinearMechanism<?> getMaxLiteraryIO()
+        {
+            LinearMechanism<?> mechanism;
+            switch (Constants.currentMode) {
+                case REAL:
+                    mechanism = 
+                        new LinearMechanismReal(NAME, new MotorIOSpark(NAME, getREVConfig(), Ports.TurboHorseVortexMax), CONSTANTS_LINEAR);
+                    break;
+                case SIM:
+                    mechanism = 
+                        new LinearMechanismSim(NAME, new MotorIOSparkSim(NAME, getREVConfig(), Ports.TurboHorseVortexMax, SENSOR_TO_MECHANISM, ROTOR_TO_SENSOR, DCMOTOR), DCMOTOR, WHEEL_MASS, true, CONSTANTS_LINEAR);
+                    break;
+                case REPLAY:
+                    mechanism = 
+                        new LinearMechanism<MotorIO>(NAME, CONSTANTS_LINEAR, new MotorIO(){}) {};
+                    break;
+                default:
+                    throw new IllegalStateException("Unrecognized Robot Mode");
+            }
+            //mechanism.enableTunablePID(PIDSlot.SLOT_0, SLOT0_PID);
+
+            return mechanism;
+        }
+    }
+
+    public class TurboLikeTheHorseVorflexConstants {
+        public static final String NAME = "88_Turbo";
+    
+        public static final Angle TOLERANCE_POSITION  = Rotations.of(0.01);
+        public static final AngularVelocity TOLERANCE_VELOCITY = RotationsPerSecond.of(0.01);
+    
+        public static final AngularVelocity CRUISE_VELOCITY = RotationsPerSecond.of(0.2);
+        public static final AngularAcceleration ACCELERATION = RotationsPerSecondPerSecond.of(0.1);
+        public static final Velocity<edu.wpi.first.units.AngularAccelerationUnit> JERK = ACCELERATION.per(Second);
+    
+        private static final double ROTOR_TO_SENSOR = (1.0 / 1.0);
+        private static final double SENSOR_TO_MECHANISM = (4.0 / 1.0);
+    
+        public static final Translation3d OFFSET = Translation3d.kZero;
+    
+        public static final Angle MIN_ANGLE = Rotations.of(0.0);
+        public static final Angle MAX_ANGLE = Rotations.of(1);
+        public static final Angle STARTING_ANGLE = Rotations.of(0.0);
+        public static final Distance WHEEL_RADIUS = Meters.of(0.05);
+    
+        public static final Distance MIN_DISTANCE = Meters.of(0.0);
+        public static final Distance MAX_DISTANCE = Meters.of(0.75);
+        public static final Distance STARTING_DISTANCE = Meters.of(0.0);
+        public static final Distance DRUM_RADIUS = Meters.of(0.05);
+    
+        public static final RotaryMechCharacteristics CONSTANTS_ROTARY =
+            new RotaryMechCharacteristics(WHEEL_RADIUS, MIN_ANGLE, MAX_ANGLE, STARTING_ANGLE, RotaryAxis.YAW);
+    
+        public static final LinearMechCharacteristics CONSTANTS_LINEAR =
+            new LinearMechCharacteristics(MIN_DISTANCE, MAX_DISTANCE, STARTING_DISTANCE, DRUM_RADIUS, new Rotation3d(0, 0, 0));
+
+        public static final Mass WHEEL_MASS = Kilograms.of(0.1);
+        public static final DCMotor DCMOTOR = DCMotor.getNeoVortex(1);
+        public static final MomentOfInertia MOI = KilogramSquareMeters
+            .of(0.5*WHEEL_MASS.in(Kilogram)*Math.pow(WHEEL_RADIUS.in(Meter),2));
+
+        public static final PID SLOT0_PID = new PID(10.0, 0.0, 0.0).withS(0.0); //Postion
+        public static final PID SLOT1_PID = new PID(0.01, 0.0, 0.0).withV(0.511); // Velocity
+
+        public static SparkFlexConfig getREVConfig()
+        {
+            SparkFlexConfig config = new SparkFlexConfig();
+
+            config.smartCurrentLimit(60)
+            .voltageCompensation(12.0)
+            .idleMode(IdleMode.kCoast)
+            .inverted(false)
+            //.advanceCommutation(120.0)//Uncomment if using minion this is from SparkMaxConfig.Presets.CTRE_Minion some peole say -120 works
+            
+            .signals
+            .primaryEncoderPositionAlwaysOn(true)
+            .primaryEncoderPositionPeriodMs(20)
+            .primaryEncoderVelocityAlwaysOn(true)
+            .primaryEncoderVelocityPeriodMs(20)
+            .appliedOutputPeriodMs(20)
+            .busVoltagePeriodMs(20)
+            .outputCurrentPeriodMs(20);
+
+            config.encoder
+            .positionConversionFactor(1/SENSOR_TO_MECHANISM)
+            .velocityConversionFactor(1/SENSOR_TO_MECHANISM/60);
+            //Uncomment if using velocity control
+            // .uvwMeasurementPeriod(10)
+            // .uvwAverageDepth(2);
+
+            config.softLimit
+            .forwardSoftLimit(MAX_ANGLE.in(Rotations))
+            .forwardSoftLimitEnabled(false)
+            .reverseSoftLimit(MIN_ANGLE.in(Rotations))
+            .reverseSoftLimitEnabled(false);
+
+            config.closedLoop
+            .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
+
+                // Position slot 0
+                .p(SLOT0_PID.P(), ClosedLoopSlot.kSlot0)
+                .i(SLOT0_PID.I(), ClosedLoopSlot.kSlot0)
+                .d(SLOT0_PID.D(), ClosedLoopSlot.kSlot0)
+                .iZone(0, ClosedLoopSlot.kSlot0)
+                .iMaxAccum(0.0, ClosedLoopSlot.kSlot0)
+                .outputRange(-1,1, ClosedLoopSlot.kSlot0)
+    
+                //Velocity slot 1
+                .p(SLOT1_PID.P(), ClosedLoopSlot.kSlot1)
+                .i(SLOT1_PID.I(), ClosedLoopSlot.kSlot1)
+                .d(SLOT1_PID.D(), ClosedLoopSlot.kSlot1)
+                .iZone(0, ClosedLoopSlot.kSlot1)
+                .iMaxAccum(0.0, ClosedLoopSlot.kSlot1)
+                .outputRange(-1,1, ClosedLoopSlot.kSlot1)
+
+                // Position slot 2 with motion profile
+                .p(SLOT0_PID.P(), ClosedLoopSlot.kSlot2)
+                .i(SLOT0_PID.I(), ClosedLoopSlot.kSlot2)
+                .d(SLOT0_PID.D(), ClosedLoopSlot.kSlot2)
+                .iZone(0, ClosedLoopSlot.kSlot2)
+                .iMaxAccum(0.0, ClosedLoopSlot.kSlot2)
+                .outputRange(-1,1, ClosedLoopSlot.kSlot2)
+    
+                //Velocity slot 3 with motion profile
+                .p(SLOT1_PID.P(), ClosedLoopSlot.kSlot3)
+                .i(SLOT1_PID.I(), ClosedLoopSlot.kSlot3)
+                .d(SLOT1_PID.D(), ClosedLoopSlot.kSlot3)
+                .iZone(0, ClosedLoopSlot.kSlot3)
+                .iMaxAccum(0.0, ClosedLoopSlot.kSlot3)
+                .outputRange(-1,1, ClosedLoopSlot.kSlot3)
+
+                .feedForward
+                .kS(SLOT0_PID.S(),ClosedLoopSlot.kSlot0)
+                .kV(SLOT0_PID.V(),ClosedLoopSlot.kSlot0)
+                .kA(SLOT0_PID.A(),ClosedLoopSlot.kSlot0)
+                .kG(SLOT0_PID.G(),ClosedLoopSlot.kSlot0)
+                .kCosRatio(0,ClosedLoopSlot.kSlot0)
+
+                .kS(SLOT1_PID.S(),ClosedLoopSlot.kSlot1)
+                .kV(SLOT1_PID.V(),ClosedLoopSlot.kSlot1)
+                .kA(SLOT1_PID.A(),ClosedLoopSlot.kSlot1)
+
+                .kS(SLOT0_PID.S(),ClosedLoopSlot.kSlot2)
+                .kV(SLOT0_PID.V(),ClosedLoopSlot.kSlot2)
+                .kA(SLOT0_PID.A(),ClosedLoopSlot.kSlot2)
+                .kG(SLOT0_PID.G(),ClosedLoopSlot.kSlot2)
+                .kCosRatio(0,ClosedLoopSlot.kSlot2)
+
+                .kS(SLOT1_PID.S(),ClosedLoopSlot.kSlot3)
+                .kV(SLOT1_PID.V(),ClosedLoopSlot.kSlot3)
+                .kA(SLOT1_PID.A(),ClosedLoopSlot.kSlot3);
+
+
+
+            config.closedLoop.maxMotion
+            //Position 
+                .cruiseVelocity(CRUISE_VELOCITY.in(RotationsPerSecond),ClosedLoopSlot.kSlot2)
+                .maxAcceleration(ACCELERATION.in(RotationsPerSecondPerSecond),ClosedLoopSlot.kSlot2)
+                .allowedProfileError(TOLERANCE_POSITION.in(Rotations),ClosedLoopSlot.kSlot2)
+                .positionMode(MAXMotionConfig.MAXMotionPositionMode.kMAXMotionTrapezoidal,ClosedLoopSlot.kSlot2)
+                
+            //Velocity
+                .cruiseVelocity(CRUISE_VELOCITY.in(RotationsPerSecond),ClosedLoopSlot.kSlot3)
+                .maxAcceleration(ACCELERATION.in(RotationsPerSecondPerSecond),ClosedLoopSlot.kSlot3)
+                .allowedProfileError(TOLERANCE_VELOCITY.in(RotationsPerSecond),ClosedLoopSlot.kSlot3);
+    
+            return config;
+        }
+
+        public static FlywheelMechanism<?> getFlywheelIO()
+        {
+            FlywheelMechanism<?> mechanism;
+            switch (Constants.currentMode) {
+                case REAL:
+                    mechanism = 
+                        new FlywheelMechanismReal(NAME,
+                            new MotorIOSpark(NAME, getREVConfig(), Ports.TurboHorseVortexFlex));
+                    break;
+                case SIM:
+                    mechanism = 
+                        new FlywheelMechanismSim(
+                            NAME,
+                            new MotorIOSparkSim(NAME, getREVConfig(),Ports.TurboHorseVortexFlex,ROTOR_TO_SENSOR,SENSOR_TO_MECHANISM,DCMOTOR),
+                            DCMOTOR, MOI, TOLERANCE_VELOCITY);
+                    break;
+                case REPLAY:
+                    mechanism = 
+                        new FlywheelMechanism<>(NAME, new MotorIO(){}) {};
+                    break;
+                default:
+                    throw new IllegalStateException("Unrecognized Robot Mode");
+            }
+            //mechanism.enableTunablePID(PIDSlot.SLOT_0, SLOT0_PID);
+
+            return mechanism;
+        }
+
+        public static RotaryMechanism<?, ?> getMaxRotomIO()
+        {
+            RotaryMechanism<?, ?> mechanism;
+            switch (Constants.currentMode) {
+                case REAL:
+                    mechanism = 
+                        new RotaryMechanismReal(NAME, new MotorIOSpark(NAME, getREVConfig(), Ports.TurboHorseVortexFlex), CONSTANTS_ROTARY, Optional.empty(), "");
+                    break;
+                case SIM:
+                    mechanism = 
+                        new RotaryMechanismSim(NAME, new MotorIOSparkSim(NAME, getREVConfig(), Ports.TurboHorseVortexFlex, ROTOR_TO_SENSOR, SENSOR_TO_MECHANISM, DCMOTOR), DCMOTOR, MOI, true, CONSTANTS_ROTARY, Optional.empty(), "");
+                    break;
+                case REPLAY:
+                    mechanism = 
+                        new RotaryMechanism<MotorIO, AbsoluteEncoderIO>(NAME, CONSTANTS_ROTARY, new MotorIO(){}, Optional.empty(), "Encoder"){};
+                    break;
+                default:
+                    throw new IllegalStateException("Unrecognized Robot Mode");
+            }
+            //mechanism.enableTunablePID(PIDSlot.SLOT_0, SLOT0_PID);
+
+            return mechanism;
+        }
+
+        public static LinearMechanism<?> getMaxLiteraryIO()
+        {
+            LinearMechanism<?> mechanism;
+            switch (Constants.currentMode) {
+                case REAL:
+                    mechanism = 
+                        new LinearMechanismReal(NAME, new MotorIOSpark(NAME, getREVConfig(), Ports.TurboHorseVortexFlex), CONSTANTS_LINEAR);
+                    break;
+                case SIM:
+                    mechanism = 
+                        new LinearMechanismSim(NAME, new MotorIOSparkSim(NAME, getREVConfig(), Ports.TurboHorseVortexFlex, SENSOR_TO_MECHANISM, ROTOR_TO_SENSOR, DCMOTOR), DCMOTOR, WHEEL_MASS, true, CONSTANTS_LINEAR);
                     break;
                 case REPLAY:
                     mechanism = 
